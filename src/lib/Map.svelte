@@ -43,6 +43,7 @@
     }>
     let progressBar: HTMLProgressElement;
     let notFoundMarkersCheckbox: HTMLInputElement;
+    let stationInput: HTMLInput;
 
     let leaflet: {
         map: La.Map | null,
@@ -65,12 +66,16 @@
         foundKeywords: [], // TODO implement
         foundStations: [],
     }
+
+    let nbFoundMarkers = 0;
+    let nbMarkers = 0;
+    let submitMsg = "Enter a value above";
     
     /**
      * Init leaflet map
      * @param node
      */
-    function init(node) {
+    function init(node): void {
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
         leaflet.map = L.map("map").setView(parisCenter, 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -89,7 +94,10 @@
             i++;
         }
 
+        nbMarkers = i; // update UI once
+
         leaflet.map.addLayer(leaflet.markersCluster);
+        leaflet.map.addLayer(leaflet.foundMarkersCluster);
         updateNotFoundMarkers();
     }
 
@@ -98,7 +106,7 @@
      * @param processed
      * @param total
      */
-    function updateProgress(processed: number, total: number/*, elapsed, layersArray*/) {
+    function updateProgress(processed: number, total: number/*, elapsed, layersArray*/): void {
         if (progressBar) progressBar.value = (processed/total) * 100;
     }
 
@@ -123,7 +131,8 @@
         return marker;
     }
 
-    function updateNotFoundMarkers() {
+
+    function updateNotFoundMarkers(): void {
         if (notFoundMarkersCheckbox?.checked) {
             leaflet.markersCluster?.addLayers(
                 Object.values(leaflet.markersCache)
@@ -134,17 +143,92 @@
             leaflet.markersCluster?.clearLayers();
         }
     }
+
+    /**
+     * Search stations matching keywords and add them to the map
+     * @param e
+     */
+    function searchStation(e) {
+        e.preventDefault();
+        
+        // not search if already searched
+        const keywords = stationInput.value;
+        for (const search of save.foundKeywords) {
+            if (stationsEqual(search, keywords)) {
+                submitMsg = "Already found";
+                return;
+            }
+        }
+        
+        // search
+        let found = false;
+        let firstFound = true;
+        for (const id in data) {
+            if (stationsEqual(data[id].stop_name, keywords)) {
+                found = true;
+                if (firstFound) {
+                    save.foundKeywords.push(keywords);
+                    submitMsg = "Found!";
+                }
+                addStation(id);
+
+                firstFound = false;
+            }
+        }
+        if (!found) submitMsg = "Not found"
+        stationInput.value = "";
+    }
+
+    /**
+     * Determine if two keywords are considered equivalent, by cleaning them up beforehand.
+     * @param a
+     * @param b
+     */
+    function stationsEqual(a: string, b: string): boolean {
+        const transform = v => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        return transform(a) === transform(b);
+        //FIXME: optimize to cache data strings and only transform once input string
+    }
+
+    /**
+     * Add a station as found to the save and the map
+     * @param id
+     */
+    function addStation(id: string): void {
+        for (const foundId of save.foundStations) {
+            if (id === foundId) return; // already added
+        }
+
+        nbFoundMarkers++;
+        save.foundStations.push(id);
+        
+        const marker = getMarker(id, false);
+        leaflet.foundMarkersCache[id] = marker;
+        leaflet.foundMarkersCluster?.addLayer(marker);
+        
+        leaflet.markersCache[id].found = true;
+        leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker);
+    }
 </script>
 
 <progress bind:this={progressBar} max="100" value="0"></progress>
+
 <label for="show-not-found">Show not found stations</label>
 <input id="show-not-found" type="checkbox" on:change={updateNotFoundMarkers} bind:this={notFoundMarkersCheckbox}/>
+
+<form action="" on:submit={searchStation}>
+    <input type="text" name="station" id="station-input" bind:this={stationInput}>
+    <button type="submit">Submit</button>
+</form>
+
+<p>{submitMsg} | Found stops: {nbFoundMarkers} / {nbMarkers}</p>
+
 <div id="map" use:init></div>
 
 
 <style>
     #map {
-        height: 80vh;
+        height: 70vh;
     }
     :global(div.leaflet-div-icon) {
         border: 2px solid black;
