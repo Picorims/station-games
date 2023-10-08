@@ -1,2 +1,19 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<script lang="ts">
+    import Map from "$lib/Map.svelte"
+    import { onMount } from "svelte";
+
+    onMount(() => {
+        // init();
+    });
+</script>
+
+<h1>Station games</h1>
+
+<Map></Map>
+
+<style>
+    :global(:root) {
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+        color: #222222;
+    }
+</style>
