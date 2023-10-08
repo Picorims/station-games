@@ -17,23 +17,7 @@
 -->
 
 <script lang="ts">
-    import InfoButton from "$lib/InfoButton.svelte";
-    import Map from "$lib/Map.svelte"
-    import { onMount } from "svelte";
-
-    onMount(() => {
-        // init();
-    });
+    export let url: string;
 </script>
 
-<h1>Station games</h1>
-<InfoButton></InfoButton>
-
-<Map></Map>
-
-<style>
-    :global(:root) {
-        font-family: Verdana, Geneva, Tahoma, sans-serif;
-        color: #222222;
-    }
-</style>
+<a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
