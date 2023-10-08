@@ -22,49 +22,123 @@
     const L = {...La, ...Lb};
     import "leaflet.markercluster/dist/MarkerCluster.css";
     import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-    import data from "$lib/stops_data.json";
+    import dataI from "$lib/stops_data.json";
 
-    let progressBar;
+    const data = dataI as unknown as Record<string, {
+        "route_id": string,
+        "route_long_name": string,
+        "stop_id": number,
+        "stop_name": string,
+        "stop_lon": number,
+        "stop_lat": number,
+        "area_id": number,
+        "town": string,
+        "postal_region": number,
+        "route_short_name": string,
+        "transport_mode": string,
+        "transport_submode": string,
+        "operator_name": string,
+        "background_color": string,
+        "text_color": string
+    }>
+    let progressBar: HTMLProgressElement;
+    let notFoundMarkersCheckbox: HTMLInputElement;
+
+    let leaflet: {
+        map: La.Map | null,
+        markersCluster: La.MarkerClusterGroup | null,
+        foundMarkersCluster: La.MarkerClusterGroup | null,
+        markersCache: Record<string, {found: boolean, marker: La.Marker}>,
+        foundMarkersCache: Record<string, La.Marker>,
+    } = {
+        map: null,
+        markersCluster: null,
+        foundMarkersCluster: null,
+        markersCache: {},
+        foundMarkersCache: {},
+    }
+
+    let save: {
+        foundKeywords: string[],
+        foundStations: string[], // ID list
+    } = {
+        foundKeywords: [], // TODO implement
+        foundStations: [],
+    }
     
+    /**
+     * Init leaflet map
+     * @param node
+     */
     function init(node) {
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
-        const map = L.map("map").setView(parisCenter, 13);
+        leaflet.map = L.map("map").setView(parisCenter, 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             minZoom: 9,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-        map.setMaxBounds([[parisCenter[0]-0.8, parisCenter[1]-0.9],[parisCenter[0]+1, parisCenter[1]+0.8]]);
+        }).addTo(leaflet.map);
+        leaflet.map.setMaxBounds([[parisCenter[0]-0.8, parisCenter[1]-0.9],[parisCenter[0]+1, parisCenter[1]+0.8]]);
 
-        let markers = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
-        let markersCache: La.Layer[] = [];
+        leaflet.markersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
+        leaflet.foundMarkersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
 
         let i = 0;
         for (const id in data) {
-            const div = document.createElement("div");
-            div.style.width = "100%";
-            div.style.height = "100%";  
-            div.style.backgroundColor = "#" + data[id].ColourWeb_hexa;
-
-            const name = data[id].stop_name + " - ligne " + data[id].route_long_name;
-
-            markersCache.push(L.marker(L.latLng(data[id].stop_lat, data[id].stop_lon), {
-                icon: L.divIcon({html: div}),
-                title: name,
-            }).bindTooltip(name, {className: "station-tooltip"}));
+            leaflet.markersCache[id] = {marker: getMarker(id), found: false};
             i++;
         }
 
-        markers.addLayers(markersCache, );
-        map.addLayer(markers);
+        leaflet.map.addLayer(leaflet.markersCluster);
+        updateNotFoundMarkers();
     }
 
-    function updateProgress(processed, total/*, elapsed, layersArray*/) {
-        if (progressBar) progressBar.value = `${(processed/total) * 100}`;
+    /**
+     * Update loading progress of markers
+     * @param processed
+     * @param total
+     */
+    function updateProgress(processed: number, total: number/*, elapsed, layersArray*/) {
+        if (progressBar) progressBar.value = (processed/total) * 100;
+    }
+
+    /**
+     * Create leaflet marker
+     * @param id
+     */
+    function getMarker(id: string, blank: boolean = true): La.Marker {
+        const name = data[id].stop_name + " - ligne " + data[id].route_long_name;
+
+        const div = document.createElement("div");
+        div.style.width = "100%";
+        div.style.height = "100%";  
+        if (!blank) div.style.backgroundColor = "#" + data[id].background_color;
+
+        const marker = L.marker(L.latLng(data[id].stop_lat, data[id].stop_lon), {
+            icon: L.divIcon({html: div}),
+            title: blank ? "not found" : name,
+        });
+        if (!blank) marker.bindTooltip(name, {className: "station-tooltip"});
+
+        return marker;
+    }
+
+    function updateNotFoundMarkers() {
+        if (notFoundMarkersCheckbox?.checked) {
+            leaflet.markersCluster?.addLayers(
+                Object.values(leaflet.markersCache)
+                    .filter(v => !v.found)
+                    .map((v) => v.marker)
+            );
+        } else {
+            leaflet.markersCluster?.clearLayers();
+        }
     }
 </script>
 
 <progress bind:this={progressBar} max="100" value="0"></progress>
+<label for="show-not-found">Show not found stations</label>
+<input id="show-not-found" type="checkbox" on:change={updateNotFoundMarkers} bind:this={notFoundMarkersCheckbox}/>
 <div id="map" use:init></div>
 
 
