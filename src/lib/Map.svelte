@@ -43,7 +43,7 @@
     }>
     let progressBar: HTMLProgressElement;
     let notFoundMarkersCheckbox: HTMLInputElement;
-    let stationInput: HTMLInput;
+    let stationInput: HTMLInputElement;
 
     let leaflet: {
         map: La.Map | null,
@@ -59,11 +59,14 @@
         foundMarkersCache: {},
     }
 
-    let save: {
+    interface Save {
+        version: 1,
         foundKeywords: string[],
         foundStations: string[], // ID list
-    } = {
-        foundKeywords: [], // TODO implement
+    }
+    let save: Save = {
+        version: 1,
+        foundKeywords: [],
         foundStations: [],
     }
 
@@ -75,7 +78,9 @@
      * Init leaflet map
      * @param node
      */
-    function init(node): void {
+    function init(node: HTMLDivElement): void {
+        console.time("init");
+        node = node; // mute error;
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
         leaflet.map = L.map("map").setView(parisCenter, 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -99,6 +104,7 @@
         leaflet.map.addLayer(leaflet.markersCluster);
         leaflet.map.addLayer(leaflet.foundMarkersCluster);
         updateNotFoundMarkers();
+        console.timeEnd("init");
     }
 
     /**
@@ -131,7 +137,6 @@
         return marker;
     }
 
-
     function updateNotFoundMarkers(): void {
         if (notFoundMarkersCheckbox?.checked) {
             leaflet.markersCluster?.addLayers(
@@ -148,7 +153,8 @@
      * Search stations matching keywords and add them to the map
      * @param e
      */
-    function searchStation(e) {
+    function searchStation(e: SubmitEvent) {
+        console.log("searching " + e);
         e.preventDefault();
         
         // not search if already searched
@@ -175,7 +181,7 @@
                 firstFound = false;
             }
         }
-        if (!found) submitMsg = "Not found"
+        if (!found) submitMsg = "Not found";
         stationInput.value = "";
     }
 
@@ -185,7 +191,7 @@
      * @param b
      */
     function stationsEqual(a: string, b: string): boolean {
-        const transform = v => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const transform = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         return transform(a) === transform(b);
         //FIXME: optimize to cache data strings and only transform once input string
     }
@@ -201,13 +207,100 @@
 
         nbFoundMarkers++;
         save.foundStations.push(id);
-        
+        addFoundMarker(id);
+    }
+
+    /**
+     * Convert a station to a found station on Leaflet
+     */
+    function addFoundMarker(id :string) {
+        console.log("showing " + id + " as found");
         const marker = getMarker(id, false);
         leaflet.foundMarkersCache[id] = marker;
         leaflet.foundMarkersCluster?.addLayer(marker);
         
         leaflet.markersCache[id].found = true;
         leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker);
+    }
+
+    /**
+     * Export save to JSON
+     */
+    export function downloadSave() {
+        console.log("downloading save");
+        const blob = new Blob([JSON.stringify(save)], {type: "application/json"});
+        const link = document.createElement("a");
+        
+        const date = new Date();
+        const y = date.getFullYear();
+        const m = date.getMonth();
+        const d = date.getDay();
+        const h = date.getHours();
+        const mn = date.getMinutes();
+        const s = date.getSeconds();
+        
+        link.download = `station_games_save_${y}_${m}_${d}_${h}_${mn}_${s}`;
+        link.href = window.URL.createObjectURL(blob);
+        link.dataset.downloadurl = ["application/json", link.download, link.href].join(":");
+
+        const evt = new MouseEvent("click", {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+        });
+
+        link.dispatchEvent(evt);
+        link.remove();
+    }
+
+    /**
+     * load external json file
+     */
+    export function uploadSave(file: Blob) {
+        console.log("loading save");
+        file.text().then((text) => {
+            const tmpSave: Save = JSON.parse(text);
+            if (!tmpSave.foundKeywords) {
+                showSaveLoadError("missing keywords");
+            }
+            if (!tmpSave.foundStations) {
+                showSaveLoadError("missing station IDs");
+            }
+            if (save.version !== 1) {
+                showSaveLoadError("unsupported version");
+            }
+            if (Object.keys(tmpSave).length > 3) {
+                showSaveLoadError("unknown fields");
+            }
+            save = tmpSave;
+            reloadMarkersFromSave();
+        });
+    }
+
+    function showSaveLoadError(context: string = "unknown") {
+        alert("Invalid save file! Make sure you uploaded the right file.\n\nContext: " + context + ".");
+    }
+
+    /**
+     * Mark all markers as not found, then mark every
+     * marker in the save as found and add them.
+     */
+    function reloadMarkersFromSave() {
+        console.log("updating the map");
+        nbFoundMarkers = save.foundStations.length;
+
+        // mark all as not found
+        leaflet.foundMarkersCluster?.clearLayers();
+        leaflet.foundMarkersCache = {};
+        for (let m in leaflet.markersCache) {
+            leaflet.markersCache[m].found = false;
+        }
+
+        // show found stations
+        for (const id of save.foundStations) {
+            addFoundMarker(id);
+        }
+        console.log("map update done.");
     }
 </script>
 

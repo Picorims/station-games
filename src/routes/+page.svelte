@@ -19,17 +19,21 @@
 <script lang="ts">
     import InfoButton from "$lib/InfoButton.svelte";
     import Map from "$lib/Map.svelte"
-    import { onMount } from "svelte";
 
-    onMount(() => {
-        // init();
-    });
+    let mapComponent: Map;
+    let hiddenInput: HTMLInputElement;
 </script>
 
 <h1>Station games</h1>
 <InfoButton></InfoButton>
 
-<Map></Map>
+<button on:click={() => {console.log(mapComponent);mapComponent.downloadSave()}}>Save</button>
+<input type="file" bind:this={hiddenInput} style="display: none;" on:change={() => {
+    if (hiddenInput.files) mapComponent.uploadSave(hiddenInput.files[0]);
+}}/>
+<button on:click={() => {hiddenInput.click();}}>Open save</button>
+
+<Map bind:this={mapComponent}></Map>
 
 <style>
     :global(:root) {
