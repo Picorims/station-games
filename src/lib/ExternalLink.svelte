@@ -18,6 +18,13 @@
 
 <script lang="ts">
     export let url: string;
+    export let label: string = "";
 </script>
 
-<a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+<a href={url} target="_blank" rel="noopener noreferrer">
+{#if label !== ""}
+{label}
+{:else}
+{url}
+{/if}
+</a>

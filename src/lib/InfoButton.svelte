@@ -28,13 +28,23 @@
 <button on:click={togglePopup}>?</button>
 
 {#if showPopup}
-    <div>
+<div class="block-interact">
+    <div class="popup">
+        <button on:click={togglePopup} class="close-popup">X</button>
         <h2>Welcome!</h2>
         <p>
-            Your goal is to guess as much stations from the Île-De-France public
-            transport network as you can!
+            <strong>
+                Your goal is to guess as much stations from the Île-De-France public
+                transport network as you can!
+            </strong>
             It is of course impossible to guess everything (or you are cheating ;)).
             But can you beat your friends and coworkers?
+        </p>
+        <p>
+            <strong>
+                This game is highly inspired from <ExternalLink url="https://memory.pour.paris" label="memory.pour.paris"></ExternalLink>,
+                please check it out if you are more into metro stations, it is worth it!
+            </strong>
         </p>
         <h2>Licenses</h2>
         <h3>Program</h3>
@@ -43,6 +53,9 @@
         </p>
         <p>
             Source code available on GitHub: <ExternalLink url="https://github.com/Picorims/station-games"></ExternalLink>
+        </p>
+        <p>
+            This game is not affiliated nor approved by Île-De-France Mobilités and its affiliates.
         </p>
         <h3>Data</h3>
         <p>
@@ -74,4 +87,37 @@
         </p>
         <button on:click={togglePopup}>Close</button>
     </div>
+</div>
 {/if}
+
+<style>
+    div.block-interact {
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: var(--c-black-transparent);
+    }
+    div.popup {
+        position: absolute;
+        left: 5vw;
+        top: 5vh;
+        width: 90vw;
+        height: 90vh;
+        padding: 2rem;
+        padding-right: 3rem;
+        overflow: auto;
+        overflow-y: scroll;
+
+        border: 5px solid var(--c-gray-0);
+        border-radius: var(--p-large-radius);
+        background-color: var(--c-gray-4);
+    }
+    button.close-popup {
+        position: fixed;
+        top: 7vh;
+        right: 7vw;
+    }
+</style>

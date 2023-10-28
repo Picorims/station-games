@@ -73,6 +73,12 @@
     let nbFoundMarkers = 0;
     let nbMarkers = 0;
     let submitMsg = "Enter a value above";
+    enum SubmitStatus {
+        OK = "var(--c-green)",
+        ERROR = "var(--c-red)",
+        NEUTRAL = "var(--c-gray-4)"
+    }
+    let submitStatus: SubmitStatus = SubmitStatus.NEUTRAL;
     
     /**
      * Init leaflet map
@@ -162,6 +168,7 @@
         for (const search of save.foundKeywords) {
             if (stationsEqual(search, keywords)) {
                 submitMsg = "Already found";
+                submitStatus = SubmitStatus.ERROR;
                 return;
             }
         }
@@ -175,13 +182,17 @@
                 if (firstFound) {
                     save.foundKeywords.push(keywords);
                     submitMsg = "Found!";
+                    submitStatus = SubmitStatus.OK;
                 }
                 addStation(id);
 
                 firstFound = false;
             }
         }
-        if (!found) submitMsg = "Not found";
+        if (!found) {
+            submitMsg = "Not found";
+            submitStatus = SubmitStatus.ERROR;
+        }
         stationInput.value = "";
     }
 
@@ -304,29 +315,90 @@
     }
 </script>
 
+
+
+
+<div class="container">
+    <div>
+        <form action="" on:submit={searchStation}>
+            <input type="text" name="station" id="station-input" placeholder="Station name" bind:this={stationInput}>
+            <button type="submit">Submit</button>
+            <div class="checkbox">
+                <label for="show-not-found">Show not found stations</label>
+                <input id="show-not-found" type="checkbox" on:change={updateNotFoundMarkers} bind:this={notFoundMarkersCheckbox}/>
+            </div>
+        </form>
+        
+        <div class="info">
+            <span class="status" style="background-color: {submitStatus}">{submitMsg}</span>
+            <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
+        </div>
+    </div>
+    
+    <div id="map" use:init></div>
+</div>
+
 <progress bind:this={progressBar} max="100" value="0"></progress>
 
-<label for="show-not-found">Show not found stations</label>
-<input id="show-not-found" type="checkbox" on:change={updateNotFoundMarkers} bind:this={notFoundMarkersCheckbox}/>
-
-<form action="" on:submit={searchStation}>
-    <input type="text" name="station" id="station-input" bind:this={stationInput}>
-    <button type="submit">Submit</button>
-</form>
-
-<p>{submitMsg} | Found stops: {nbFoundMarkers} / {nbMarkers}</p>
-
-<div id="map" use:init></div>
 
 
 <style>
+    div.container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+    }
     #map {
-        height: 70vh;
+        height: 100%;
     }
     :global(div.leaflet-div-icon) {
         border: 2px solid black;
     }
     :global(.station-tooltip) {
         font-size: 1rem;
+    }
+
+    form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+    }
+
+    div.checkbox {
+        margin: 0.2rem;
+    }
+
+    div.info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+    }
+
+    div.info > * {
+        flex: 0 0 auto;
+    }
+
+    @media screen and (max-width: 420px) {
+        div.info {
+            justify-content: center;
+        }
+    }
+
+    span.status {
+        font-weight: bold;
+        padding: 0.2em 0.5em;
+        border-radius: var(--p-small-radius);
+    }
+
+    progress {
+        position: fixed;
+        z-index: 5000;
+        bottom: 0px;
+        left: 5px;
+        width: 100px;
     }
 </style>
