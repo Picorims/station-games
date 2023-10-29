@@ -350,7 +350,7 @@
      * @param b
      */
     function stationsEqual(a: string, b: string): boolean {
-        const transform = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const transform = (v: string) => v.normalize("NFD").replaceAll(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ");
         return transform(a) === transform(b);
         //FIXME: optimize to cache data strings and only transform once input string
     }
