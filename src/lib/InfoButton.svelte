@@ -31,6 +31,7 @@
 <div class="block-interact">
     <div class="popup">
         <button on:click={togglePopup} class="close-popup">X</button>
+        <p>v1.0.0 - <ExternalLink url="https://github.com/Picorims/station-games/blob/main/CHANGELOGS.md" label="Changelogs"></ExternalLink></p>
         <h2>Welcome!</h2>
         <p>
             <strong>
@@ -46,6 +47,23 @@
                 please check it out if you are more into metro stations, it is worth it!
             </strong>
         </p>
+        <h3>How to play</h3>
+        <p>
+            Enter a station name in the input field. You can omit dashes ("-"), capital letters, accents and diacritics.
+            Found stations will be shown on the map, with their name and corresponding line(s). They will be filled with
+            the color of these lines.
+            You can optionally show not found stations (in white) in the settings to help you find them.
+        </p>
+        <p>
+            Because there are many stations, they are grouped for performance and readability.
+            The color code is as follows:
+        </p>
+        <ul>
+            <li><strong>green group:</strong> found;</li>
+            <li><strong>white group:</strong> not found;</li>
+            <li><strong>orange group:</strong> many stations not found.</li>
+        </ul>
+        <hr>
         <h2>Licenses</h2>
         <h3>Program</h3>
         <p>
