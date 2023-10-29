@@ -42,9 +42,10 @@
         "text_color": string
     }>
     let progressBar: HTMLProgressElement;
-    let hideNotFoundMarkers: boolean = true;
-    let stopsFusioned: boolean = true;
+    let hideNotFoundMarkers = true;
+    let stopsFusioned = true;
     let stationInput: HTMLInputElement;
+    let loading = true;
 
     let leaflet: {
         map: La.Map | null,
@@ -108,6 +109,7 @@
      */
     function init(node: HTMLDivElement): void {
         console.time("init");
+        loading = true;
         node = node; // mute error;
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
         leaflet.map = L.map("map").setView(parisCenter, 13);
@@ -155,6 +157,7 @@
         updateNotFoundMarkers(hideNotFoundMarkers);
         console.timeEnd("init");
         initDone = true;
+        loading = false;
     }
 
     function regenMarkerCache() {
@@ -170,7 +173,16 @@
      * @param total
      */
     function updateProgress(processed: number, total: number/*, elapsed, layersArray*/): void {
-        if (progressBar) progressBar.value = (processed/total) * 100;
+        if (progressBar) {
+            progressBar.value = (processed/total) * 100;
+            if (processed === total) {
+                progressBar.style.display = "none";
+                loading = false;
+            } else {
+                loading = true;
+                progressBar.style.display = "initial";
+            }
+        }
     }
 
     function getClusterDivIcon(cluster: La.MarkerCluster, found: boolean): L.DivIcon {
@@ -283,9 +295,12 @@
      */
     function updateNotFoundMarkers(hide: boolean) {
         if (hide) {
+            loading = true; 
             console.log("hide not found stations");
             leaflet.markersCluster?.clearLayers();
+            loading = false;
         } else {
+            loading = true; 
             console.log("show not found stations");
             leaflet.markersCluster?.clearLayers();
             leaflet.markersCluster?.addLayers(
@@ -308,6 +323,7 @@
      * @param e
      */
     function searchStation(e: SubmitEvent) {
+        loading = true;
         console.log("searching " + e);
         e.preventDefault();
         
@@ -317,6 +333,7 @@
             if (stationsEqual(search, keywords)) {
                 submitMsg = "Already found";
                 submitStatus = SubmitStatus.ERROR;
+                loading = false;
                 return;
             }
         }
@@ -342,6 +359,7 @@
             submitStatus = SubmitStatus.ERROR;
         }
         stationInput.value = "";
+        loading = false;
     }
 
     /**
@@ -398,6 +416,7 @@
      * Export save to JSON
      */
     export function downloadSave() {
+        loading = true;
         console.log("downloading save");
         const blob = new Blob([JSON.stringify(save)], {type: "application/json"});
         const link = document.createElement("a");
@@ -422,6 +441,7 @@
 
         link.dispatchEvent(evt);
         link.remove();
+        loading = false;
     }
 
     /**
@@ -457,6 +477,7 @@
      * marker in the save as found and add them.
      */
     function reloadMarkersFromSave() {
+        loading = true;
         if (!initDone) {
             console.log("attempted updating the map");
             return;
@@ -478,6 +499,7 @@
         }
         updateNotFoundMarkers(hideNotFoundMarkers);
         console.log("map update done.");
+        loading = false;
     }
     $: {
         const triggerList = [stopsFusioned];
@@ -493,16 +515,16 @@
 <div class="container">
     <div>
         <form action="" on:submit={searchStation}>
-            <input type="text" name="station" id="station-input" placeholder="Station name" bind:this={stationInput}>
+            <input type="text" name="station" id="station-input" placeholder="Station name" bind:this={stationInput} disabled={loading}>
             <button type="submit">Submit</button>
             <details>
                 <summary>Settings</summary>
                 <div class="checkbox">
-                    <input id="show-not-found" type="checkbox" bind:checked={hideNotFoundMarkers}/>
+                    <input id="show-not-found" type="checkbox" bind:checked={hideNotFoundMarkers} disabled={loading}/>
                     <label for="show-not-found">Hide not found stations</label>
                 </div>
                 <div class="checkbox">
-                    <input id="fusion-stops" type="checkbox" bind:checked={stopsFusioned}/>
+                    <input id="fusion-stops" type="checkbox" bind:checked={stopsFusioned} disabled={loading}/>
                     <label for="fusion-stops">Show one point for overlapping stops</label>
                 </div>
             </details>
@@ -518,6 +540,7 @@
 </div>
 
 <progress bind:this={progressBar} max="100" value="0"></progress>
+<progress class:visible={loading}></progress>
 
 
 
@@ -624,9 +647,16 @@
 
     progress {
         position: fixed;
+        display: none;
         z-index: 5000;
-        bottom: 0px;
+        bottom: 10px;
         left: 5px;
         width: 50vw;
+    }
+    progress.visible {
+        display: initial;
+    }
+    progress:indeterminate {
+        bottom: 0;
     }
 </style>

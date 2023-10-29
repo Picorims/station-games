@@ -110,6 +110,9 @@
         border: 4px solid var(--c-gray-0);
         border-radius: var(--p-medium-radius);
     }
+    :global(input[type="text"][disabled]) {
+        border-color: var(--c-gray-2);
+    }
 
     header {
         width: 100vw;
