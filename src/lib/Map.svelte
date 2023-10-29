@@ -109,6 +109,7 @@
      */
     function init(node: HTMLDivElement): void {
         console.time("init");
+        console.log("init");
         loading = true;
         node = node; // mute error;
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
@@ -120,7 +121,7 @@
         }).addTo(leaflet.map);
         leaflet.map.setMaxBounds([[parisCenter[0]-1.5, parisCenter[1]-1.5],[parisCenter[0]+1.5, parisCenter[1]+1.5]]);
 
-        const zoomFn = (zoom: number) => (zoom >= 16)? 3 : (zoom >= 15)? 10 : (zoom >= 11)? 50 : 60;
+        const zoomFn = (zoom: number) => (zoom >= 16)? 3 : (zoom >= 15)? 10 : (zoom >= 13)? 60 : (zoom >= 15)? 70 : 80;
         leaflet.markersCluster = L.markerClusterGroup({
             chunkedLoading: true,
             chunkProgress: updateProgress,
@@ -161,10 +162,13 @@
     }
 
     function regenMarkerCache() {
+        console.time("regen marker cache");
+        console.log("regen marker cache");
         for (const id in data) {
             leaflet.markersCache[id].marker = null; // necessary to force getFusionedMarker to recreate a marker
             leaflet.markersCache[id].marker = stopsFusioned? getFusionedMarker(id) : getMarker(id);
         }
+        console.timeEnd("regen marker cache");
     }
 
     /**
@@ -221,12 +225,8 @@
         }
 
 
-        //FIXME: optimize div creation
-        const div = document.createElement("div"); //4.9%
-        div.style.display = "flex"; // 11%
-        div.style.width = "100%"; // 8.9%
-        div.style.height = "100%"; // 4.9%
-        div.style.backgroundColor = "white"; //12%
+        const div = document.createElement("div");
+        div.className = "station-marker " + ((blank)? "s-blank" : "s-filled");
         if (!blank) {
             if (stopsFusioned) {
                 for (const stopID of matchingIDs) {
@@ -245,7 +245,7 @@
             }),
             title: name,
         });
-        marker.bindTooltip(name, {className: "station-tooltip"}); //FIXME 23% = bottleneck on not found stations ?
+        if (!blank) marker.bindTooltip(name, {className: "station-tooltip"});
 
         return marker;
     }
@@ -256,7 +256,6 @@
     function addColor(div: HTMLDivElement, color: string) {
         const child = document.createElement("div");
         child.style.backgroundColor = color;
-        child.style.flex = "1 1 auto";
         div.appendChild(child);
     }
 
@@ -283,11 +282,20 @@
         }
     }
 
+    let coordCache: Record<string, string> = {};
     /**
      * Convert a classical ID to a lon-lat ID.
     */
     function getCoordID(id: string) {
-        return `${data[id].stop_lat}-${data[id].stop_lon}`;
+        const cache = coordCache[id];
+        if (cache) {
+            return cache;
+        }
+        else {
+            const str = `${data[id].stop_lat}-${data[id].stop_lon}`;
+            coordCache[id] = str;
+            return str;
+        }
     }
 
     /**
@@ -324,7 +332,8 @@
      */
     function searchStation(e: SubmitEvent) {
         loading = true;
-        console.log("searching " + e);
+        console.log("searching " + stationInput.value);
+        console.time("searching");
         e.preventDefault();
         
         // not search if already searched
@@ -334,6 +343,7 @@
                 submitMsg = "Already found";
                 submitStatus = SubmitStatus.ERROR;
                 loading = false;
+                console.timeEnd("searching");
                 return;
             }
         }
@@ -360,17 +370,28 @@
         }
         stationInput.value = "";
         loading = false;
+        console.timeEnd("searching");
     }
 
+    let transformCache: Record<string, string> = {};
     /**
      * Determine if two keywords are considered equivalent, by cleaning them up beforehand.
      * @param a
      * @param b
      */
     function stationsEqual(a: string, b: string): boolean {
-        const transform = (v: string) => v.normalize("NFD").replaceAll(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ");
+        const transform = (v: string) => {
+            const cache = transformCache[v];
+            if (cache) {
+                return cache;
+            } else {
+                const transform = v.normalize("NFD").replaceAll(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ");
+                transformCache[v] = transform;
+                return transform;
+            }
+            
+        };
         return transform(a) === transform(b);
-        //FIXME: optimize to cache data strings and only transform once input string
     }
 
     /**
@@ -391,7 +412,7 @@
      * Convert a station to a found station on the map
      */
     function addFoundMarker(id :string) {
-        console.log("showing " + id + " as found");
+        // console.log("showing " + id + " as found");
         const posID = getCoordID(id);
         const marker = stopsFusioned ? getFusionedMarker(id, false) : getMarker(id, false);
 
@@ -494,9 +515,13 @@
         regenMarkerCache();
 
         // show found stations
+        console.log("reload found stations")
+        let i = 0;
         for (const id of save.foundStations) {
             addFoundMarker(id);
+            i++;
         }
+        console.log("loaded " + i + " stations")
         updateNotFoundMarkers(hideNotFoundMarkers);
         console.log("map update done.");
         loading = false;
@@ -505,8 +530,6 @@
         const triggerList = [stopsFusioned];
         reloadMarkersFromSave();
     }
-
-    // TODO: markercluster grouping too quickly
 </script>
 
 
@@ -554,8 +577,22 @@
     #map {
         height: 100%;
     }
-    :global(div.leaflet-div-icon) {
+
+    :global(.leaflet-div-icon) {
+        border: none;
+    }
+    :global(.station-marker) {
         border: 2px solid black;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+    }
+    :global(.station-marker > div) {
+        flex: 1 1 auto;
+    }
+    :global(.station-marker.s-blank) {
+        content: "?";
     }
     :global(.station-tooltip) {
         font-size: 1rem;
