@@ -116,7 +116,7 @@
             minZoom: 9,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(leaflet.map);
-        leaflet.map.setMaxBounds([[parisCenter[0]-0.8, parisCenter[1]-0.9],[parisCenter[0]+1, parisCenter[1]+0.8]]);
+        leaflet.map.setMaxBounds([[parisCenter[0]-1.5, parisCenter[1]-1.5],[parisCenter[0]+1.5, parisCenter[1]+1.5]]);
 
         leaflet.markersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
         leaflet.foundMarkersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
@@ -186,12 +186,12 @@
         }
 
 
-
-        const div = document.createElement("div");
-        div.style.display = "flex";
-        div.style.width = "100%";
-        div.style.height = "100%";
-        div.style.backgroundColor = "white";
+        //FIXME: optimize div creation
+        const div = document.createElement("div"); //4.9%
+        div.style.display = "flex"; // 11%
+        div.style.width = "100%"; // 8.9%
+        div.style.height = "100%"; // 4.9%
+        div.style.backgroundColor = "white"; //12%
         if (!blank) {
             if (stopsFusioned) {
                 for (const stopID of matchingIDs) {
@@ -210,7 +210,7 @@
             }),
             title: name,
         });
-        marker.bindTooltip(name, {className: "station-tooltip"});
+        marker.bindTooltip(name, {className: "station-tooltip"}); //FIXME 23% = bottleneck on not found stations ?
 
         return marker;
     }
@@ -274,7 +274,7 @@
                     && (leaflet.overlappingIDs[getCoordID(v[0])].indexOf(v[0]) === 0 || !stopsFusioned)
                 ))
                 .map((v) => v[1].marker as La.Marker<any>)
-            ); //FIXME: ignore overlapping option
+            );
         }
     }
     // subscribe to changes
