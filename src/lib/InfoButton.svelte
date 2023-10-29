@@ -103,11 +103,11 @@
     div.popup {
         position: absolute;
         left: 5vw;
-        top: 5vh;
+        top: 8vh;
         width: 90vw;
-        height: 90vh;
+        height: 84vh;
         padding: 2rem;
-        padding-right: 3rem;
+        padding-right: 6vw;
         overflow: auto;
         overflow-y: scroll;
 
@@ -117,7 +117,18 @@
     }
     button.close-popup {
         position: fixed;
-        top: 7vh;
-        right: 7vw;
+        top: 10vh;
+        right: 9vw;
+        border: 4px solid var(--c-gray-4);
+        border-radius: var(--p-medium-radius)
+    }
+
+    @media screen and (max-width: 640px) {
+        div.popup {
+            padding-right: 2rem;
+        }
+        button.close-popup {
+            right: 15vw;
+        }
     }
 </style>

@@ -42,22 +42,42 @@
         "text_color": string
     }>
     let progressBar: HTMLProgressElement;
-    let notFoundMarkersCheckbox: HTMLInputElement;
+    let hideNotFoundMarkers: boolean = true;
+    let stopsFusioned: boolean = false;
     let stationInput: HTMLInputElement;
 
     let leaflet: {
         map: La.Map | null,
         markersCluster: La.MarkerClusterGroup | null,
         foundMarkersCluster: La.MarkerClusterGroup | null,
-        markersCache: Record<string, {found: boolean, marker: La.Marker}>,
+        /**
+         * key is ID
+        */
+        markersCache: Record<string, {
+            found: boolean,
+            /**
+             * if fusioned marker, multiple chache entries can map to the same marker.
+            */
+            marker: La.Marker | null
+        }>,
+        /**
+         * key is ID in NON fusioned mode, coordinates otherwise
+        */
         foundMarkersCache: Record<string, La.Marker>,
+        /**
+         * coordinate to array of IDs
+         */
+        overlappingIDs: Record<string, Array<string>>
     } = {
         map: null,
         markersCluster: null,
         foundMarkersCluster: null,
         markersCache: {},
         foundMarkersCache: {},
+        overlappingIDs: {},
     }
+
+    
 
     interface Save {
         version: 1,
@@ -79,6 +99,8 @@
         NEUTRAL = "var(--c-gray-4)"
     }
     let submitStatus: SubmitStatus = SubmitStatus.NEUTRAL;
+
+    let initDone = false;
     
     /**
      * Init leaflet map
@@ -101,16 +123,33 @@
 
         let i = 0;
         for (const id in data) {
-            leaflet.markersCache[id] = {marker: getMarker(id), found: false};
+            leaflet.markersCache[id] = {marker: null, found: false};
+
+            // cache overlapping stops
+            const posID = getCoordID(id);
+            if (leaflet.overlappingIDs[posID]) {
+                leaflet.overlappingIDs[posID].push(id);
+            } else {
+                leaflet.overlappingIDs[posID] = [id];
+            }
             i++;
         }
+        regenMarkerCache();
 
         nbMarkers = i; // update UI once
 
         leaflet.map.addLayer(leaflet.markersCluster);
         leaflet.map.addLayer(leaflet.foundMarkersCluster);
-        updateNotFoundMarkers();
+        updateNotFoundMarkers(hideNotFoundMarkers);
         console.timeEnd("init");
+        initDone = true;
+    }
+
+    function regenMarkerCache() {
+        for (const id in data) {
+            leaflet.markersCache[id].marker = null; // necessary to force getFusionedMarker to recreate a marker
+            leaflet.markersCache[id].marker = stopsFusioned? getFusionedMarker(id) : getMarker(id);
+        }
     }
 
     /**
@@ -127,33 +166,119 @@
      * @param id
      */
     function getMarker(id: string, blank: boolean = true): La.Marker {
-        const name = data[id].stop_name + " - ligne " + data[id].route_long_name;
+        const posID = getCoordID(id);
+        const matchingIDs = leaflet.overlappingIDs[posID];
+        
+        let name: string;
+        if (stopsFusioned) {
+            if (blank) {
+                name = `not found (x${matchingIDs.length})`;
+            } else {
+                name = data[id].stop_name + " - ligne(s) ";
+    
+                for (let i = 0; i < matchingIDs.length; i++) {
+                    name += data[matchingIDs[i]].route_long_name;
+                    if (i < matchingIDs.length - 1) name += ", ";
+                }
+            }
+        } else {
+            name = (blank)? "not found" : data[id].stop_name + " - ligne " + data[id].route_long_name;
+        }
+
+
 
         const div = document.createElement("div");
+        div.style.display = "flex";
         div.style.width = "100%";
-        div.style.height = "100%";  
-        if (!blank) div.style.backgroundColor = "#" + data[id].background_color;
+        div.style.height = "100%";
+        div.style.backgroundColor = "white";
+        if (!blank) {
+            if (stopsFusioned) {
+                for (const stopID of matchingIDs) {
+                    addColor(div, "#" + data[stopID].background_color);
+                }
+            } else {
+                if (!blank) addColor(div, "#" + data[id].background_color);
+            }
+        }
+
 
         const marker = L.marker(L.latLng(data[id].stop_lat, data[id].stop_lon), {
-            icon: L.divIcon({html: div}),
-            title: blank ? "not found" : name,
+            icon: L.divIcon({
+                html: div,
+                iconSize: stopsFusioned? L.point(12 + (4*(matchingIDs.length-1)), 12) : L.point(12,12),
+            }),
+            title: name,
         });
-        if (!blank) marker.bindTooltip(name, {className: "station-tooltip"});
+        marker.bindTooltip(name, {className: "station-tooltip"});
 
         return marker;
     }
 
-    function updateNotFoundMarkers(): void {
-        if (notFoundMarkersCheckbox?.checked) {
-            leaflet.markersCluster?.addLayers(
-                Object.values(leaflet.markersCache)
-                    .filter(v => !v.found)
-                    .map((v) => v.marker)
-            );
+    /**
+     * Add a color to the div of a marker
+    */
+    function addColor(div: HTMLDivElement, color: string) {
+        const child = document.createElement("div");
+        child.style.backgroundColor = color;
+        child.style.flex = "1 1 auto";
+        div.appendChild(child);
+    }
+
+    /**
+     * Returns the marker corresponding to the coordinates associated
+     * with the provided id.
+     * @param id
+     * @param blank
+     */
+    function getFusionedMarker(id: string, blank: boolean = true): La.Marker {
+        const posID = getCoordID(id);
+        if (blank) {
+            if (leaflet.markersCache[id] && leaflet.markersCache[id].marker !== null) {
+                return leaflet.markersCache[id].marker as La.Marker<any>;
+            } else {
+                return getMarker(id, blank);
+            }
         } else {
-            leaflet.markersCluster?.clearLayers();
+            if (leaflet.foundMarkersCache[posID]) {
+                return leaflet.foundMarkersCache[posID];
+            } else {
+                return getMarker(id, blank);
+            }
         }
     }
+
+    /**
+     * Convert a classical ID to a lon-lat ID.
+    */
+    function getCoordID(id: string) {
+        return `${data[id].stop_lat}-${data[id].stop_lon}`;
+    }
+
+    /**
+     * Regenerate not found markers on the map
+     */
+    function updateNotFoundMarkers(hide: boolean) {
+        if (hide) {
+            console.log("hide not found stations");
+            leaflet.markersCluster?.clearLayers();
+        } else {
+            console.log("show not found stations");
+            leaflet.markersCluster?.clearLayers();
+            leaflet.markersCluster?.addLayers(
+                Object.entries(leaflet.markersCache)
+                .filter(v => (
+                    !v[1].found
+                    && v[1].marker !== null
+                    // only the first ID of the overlapping list loads the marker
+                    && (leaflet.overlappingIDs[getCoordID(v[0])].indexOf(v[0]) === 0 || !stopsFusioned)
+                ))
+                .map((v) => v[1].marker as La.Marker<any>)
+            ); //FIXME: ignore overlapping option
+        }
+    }
+    // subscribe to changes
+    $: updateNotFoundMarkers(hideNotFoundMarkers);
 
     /**
      * Search stations matching keywords and add them to the map
@@ -222,16 +347,28 @@
     }
 
     /**
-     * Convert a station to a found station on Leaflet
+     * Convert a station to a found station on the map
      */
     function addFoundMarker(id :string) {
         console.log("showing " + id + " as found");
-        const marker = getMarker(id, false);
-        leaflet.foundMarkersCache[id] = marker;
+        const posID = getCoordID(id);
+        const marker = stopsFusioned ? getFusionedMarker(id, false) : getMarker(id, false);
+
+        leaflet.foundMarkersCache[stopsFusioned? posID : id] = marker;
         leaflet.foundMarkersCluster?.addLayer(marker);
         
-        leaflet.markersCache[id].found = true;
-        leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker);
+        if (stopsFusioned) {
+            for (const stopID of leaflet.overlappingIDs[posID]) {
+                leaflet.markersCache[stopID].found = true;
+            }
+        } else {
+            leaflet.markersCache[id].found = true;
+        }
+        if (leaflet.markersCache[id].marker !== null) {
+            leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker as La.Marker<any>);
+        } else {
+            throw new Error("addFoundMarker: didn't expect a null marker when reading marker cache.");
+        }
     }
 
     /**
@@ -297,6 +434,10 @@
      * marker in the save as found and add them.
      */
     function reloadMarkersFromSave() {
+        if (!initDone) {
+            console.log("attempted updating the map");
+            return;
+        };
         console.log("updating the map");
         nbFoundMarkers = save.foundStations.length;
 
@@ -306,12 +447,18 @@
         for (let m in leaflet.markersCache) {
             leaflet.markersCache[m].found = false;
         }
+        regenMarkerCache();
 
         // show found stations
         for (const id of save.foundStations) {
             addFoundMarker(id);
         }
+        updateNotFoundMarkers(hideNotFoundMarkers);
         console.log("map update done.");
+    }
+    $: {
+        const triggerList = [stopsFusioned];
+        reloadMarkersFromSave();
     }
 </script>
 
@@ -323,16 +470,23 @@
         <form action="" on:submit={searchStation}>
             <input type="text" name="station" id="station-input" placeholder="Station name" bind:this={stationInput}>
             <button type="submit">Submit</button>
-            <div class="checkbox">
-                <label for="show-not-found">Show not found stations</label>
-                <input id="show-not-found" type="checkbox" on:change={updateNotFoundMarkers} bind:this={notFoundMarkersCheckbox}/>
-            </div>
+            <details>
+                <summary>Settings</summary>
+                <div class="checkbox">
+                    <input id="show-not-found" type="checkbox" bind:checked={hideNotFoundMarkers}/>
+                    <label for="show-not-found">Hide not found stations</label>
+                </div>
+                <div class="checkbox">
+                    <input id="fusion-stops" type="checkbox" bind:checked={stopsFusioned}/>
+                    <label for="fusion-stops">Show one point for overlapping stops</label>
+                </div>
+            </details>
         </form>
         
-        <div class="info">
+        <output class="info">
             <span class="status" style="background-color: {submitStatus}">{submitMsg}</span>
             <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
-        </div>
+        </output>
     </div>
     
     <div id="map" use:init></div>
@@ -366,11 +520,38 @@
         align-items: center;
     }
 
+    details {
+        margin: 0.5rem 1rem;
+        border-radius: var(--p-small-radius);
+        border: 2px solid var(--c-blue-3);
+        overflow: hidden;
+        min-width: 50%;
+    }
+
+    @media screen and (max-width: 640px) {
+        details {width: 100%;}
+    }
+    
+    details summary {
+        font-weight: bold;
+        font-size: 1.2rem;
+        padding: 0.2rem 0.5rem;
+        background-color: var(--c-blue-3);
+        cursor: pointer;
+    }
+
     div.checkbox {
         margin: 0.2rem;
     }
 
-    div.info {
+    div.checkbox > * {
+        cursor: pointer;
+    }
+    div.checkbox > label:hover {
+        font-weight: bold;
+    }
+
+    output.info {
         display: flex;
         flex-wrap: wrap;
         align-items: center;

@@ -45,7 +45,7 @@
     :global(:root) {
         font-family: Verdana, Geneva, Tahoma, sans-serif;
         --c-black: #02111B;
-        --c-black-transparent: #02111B88;
+        --c-black-transparent: #02111BBB;
         --c-gray-0: #2C3840;
         --c-gray-1: #555F66;
         --c-gray-2: #7F878C;
