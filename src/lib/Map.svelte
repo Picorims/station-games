@@ -118,7 +118,7 @@
         loading = true;
 
         console.log("loading data");
-        const jsonFetch = await fetch("./stops_data.json");
+        const jsonFetch = await fetch("/stops_data.json");
         data = await jsonFetch.json();
 
         console.log("setup leaflet");
