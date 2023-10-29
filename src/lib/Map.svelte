@@ -127,8 +127,8 @@
         console.log("setup leaflet");
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
         leaflet.map = Lf.map("map").setView(parisCenter, 13);
-        Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
+        Lf.tileLayer('https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            maxZoom: 17,
             minZoom: 9,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(leaflet.map);

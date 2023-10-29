@@ -1,5 +1,11 @@
 # Changelogs
 
+## v1.0.2
+
+### Changed
+
+- Replaced OSM.org map with OSM.fr map to not spoil stations.
+
 ## v1.0.1
 
 ### Fixed
