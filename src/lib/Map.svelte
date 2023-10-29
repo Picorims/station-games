@@ -43,7 +43,7 @@
     }>
     let progressBar: HTMLProgressElement;
     let hideNotFoundMarkers: boolean = true;
-    let stopsFusioned: boolean = false;
+    let stopsFusioned: boolean = true;
     let stationInput: HTMLInputElement;
 
     let leaflet: {
