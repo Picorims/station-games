@@ -118,7 +118,10 @@
         loading = true;
 
         console.log("loading data");
-        const jsonFetch = await fetch("/stops_data.json");
+        let jsonFetch = await fetch("/stops_data.json"); // dev url
+        if (jsonFetch.status >= 400 && jsonFetch.status < 600) {
+            jsonFetch = await fetch("/station-games/stops_data.json"); // prod url
+        }
         data = await jsonFetch.json();
 
         console.log("setup leaflet");
