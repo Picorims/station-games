@@ -85,10 +85,13 @@
         foundKeywords: string[],
         foundStations: string[], // ID list
     }
-    let save: Save = {
-        version: 1,
-        foundKeywords: [],
-        foundStations: [],
+    let save: Save = emptySave();
+    function emptySave(): Save {
+        return {
+            version: 1,
+            foundKeywords: [],
+            foundStations: [],
+        };
     }
 
     let nbFoundMarkers = 0;
@@ -170,6 +173,20 @@
         }
         console.timeEnd("regen marker cache");
     }
+
+    /**
+     * load new game
+     */
+    export function reset() {
+        if (confirm("Are you sure?")) {
+            save = emptySave();
+            nbFoundMarkers = 0;
+            reloadMarkersFromSave();
+            submitMsg = "Enter a value above";
+            submitStatus = SubmitStatus.NEUTRAL;
+        }
+    }
+
 
     /**
      * Update loading progress of markers
