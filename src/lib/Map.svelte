@@ -16,15 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -->
 <script lang="ts">
-    import * as La from "leaflet";
+    import * as Lf from "leaflet";
     import "leaflet/dist/leaflet.css";
-    import * as Lb from "leaflet.markercluster";
-    const L = {...La, ...Lb};
+    import * as Lm from "leaflet.markercluster";
+    // const L = {...Lf, ...Lm};
     import "leaflet.markercluster/dist/MarkerCluster.css";
     import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-    import dataI from "$lib/stops_data.json";
+    // import dataI from "$lib/stops_data.json";
 
-    const data = dataI as unknown as Record<string, {
+    let data: Record<string, {
         "route_id": string,
         "route_long_name": string,
         "stop_id": number,
@@ -40,7 +40,7 @@
         "operator_name": string,
         "background_color": string,
         "text_color": string
-    }>
+    }> = {};
     let progressBar: HTMLProgressElement;
     let hideNotFoundMarkers = true;
     let stopsFusioned = true;
@@ -48,9 +48,9 @@
     let loading = true;
 
     let leaflet: {
-        map: La.Map | null,
-        markersCluster: La.MarkerClusterGroup | null,
-        foundMarkersCluster: La.MarkerClusterGroup | null,
+        map: Lf.Map | null,
+        markersCluster: Lf.MarkerClusterGroup | null,
+        foundMarkersCluster: Lf.MarkerClusterGroup | null,
         /**
          * key is ID
         */
@@ -59,12 +59,12 @@
             /**
              * if fusioned marker, multiple chache entries can map to the same marker.
             */
-            marker: La.Marker | null
+            marker: Lf.Marker | null
         }>,
         /**
          * key is ID in NON fusioned mode, coordinates otherwise
         */
-        foundMarkersCache: Record<string, La.Marker>,
+        foundMarkersCache: Record<string, Lf.Marker>,
         /**
          * coordinate to array of IDs
          */
@@ -110,14 +110,21 @@
      * Init leaflet map
      * @param node
      */
-    function init(node: HTMLDivElement): void {
+    async function init(node: HTMLDivElement) {
+        node = node; // mute error;
+
         console.time("init");
         console.log("init");
         loading = true;
-        node = node; // mute error;
+
+        console.log("loading data");
+        const jsonFetch = await fetch("./stops_data.json");
+        data = await jsonFetch.json();
+
+        console.log("setup leaflet");
         const parisCenter: L.LatLngTuple = [48.86296891769729, 2.3394514484316247];
-        leaflet.map = L.map("map").setView(parisCenter, 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        leaflet.map = Lf.map("map").setView(parisCenter, 13);
+        Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             minZoom: 9,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -125,13 +132,13 @@
         leaflet.map.setMaxBounds([[parisCenter[0]-1.5, parisCenter[1]-1.5],[parisCenter[0]+1.5, parisCenter[1]+1.5]]);
 
         const zoomFn = (zoom: number) => (zoom >= 16)? 3 : (zoom >= 15)? 10 : (zoom >= 13)? 60 : (zoom >= 15)? 70 : 80;
-        leaflet.markersCluster = L.markerClusterGroup({
+        leaflet.markersCluster = Lf.markerClusterGroup({
             chunkedLoading: true,
             chunkProgress: updateProgress,
             maxClusterRadius: zoomFn,
             iconCreateFunction: (cluster) => getClusterDivIcon(cluster, false),
         });
-        leaflet.foundMarkersCluster = L.markerClusterGroup({
+        leaflet.foundMarkersCluster = Lf.markerClusterGroup({
             chunkedLoading: true,
             chunkProgress: updateProgress,
             maxClusterRadius: zoomFn,
@@ -139,6 +146,7 @@
         });
         leaflet.map.on("zoom", () => {console.log("zoom: " + leaflet.map?.getZoom())})
 
+        console.log("build cache");
         let i = 0;
         for (const id in data) {
             leaflet.markersCache[id] = {marker: null, found: false};
@@ -200,7 +208,7 @@
      */
     function updateProgress(processed: number, total: number/*, elapsed, layersArray*/): void {
         if (progressBar) {
-            progressBar.value = (processed/total) * 100;
+            progressBar.value = (total === 0)? 100 : (processed/total) * 100;
             if (processed === total) {
                 progressBar.style.display = "none";
                 loading = false;
@@ -211,14 +219,14 @@
         }
     }
 
-    function getClusterDivIcon(cluster: La.MarkerCluster, found: boolean): L.DivIcon {
+    function getClusterDivIcon(cluster: Lf.MarkerCluster, found: boolean): L.DivIcon {
         const count = cluster.getChildCount();
         const size = (count > 500)? "large" : (count > 120)? "medium" : "small"
 
-        return new L.DivIcon({
+        return new Lf.DivIcon({
             html: `<span>${count}</span>`,
             className: `m-cluster m-${size} m-${found? "found" : "not-found"}`,
-            iconSize: new L.Point(40, 20),
+            iconSize: new Lf.Point(40, 20),
         });
     }
 
@@ -260,10 +268,10 @@
         }
 
 
-        const marker = L.marker(L.latLng(data[id].stop_lat, data[id].stop_lon), {
-            icon: L.divIcon({
+        const marker = Lf.marker(Lf.latLng(data[id].stop_lat, data[id].stop_lon), {
+            icon: Lf.divIcon({
                 html: div,
-                iconSize: stopsFusioned? L.point(12 + (4*(matchingIDs.length-1)), 12) : L.point(12,12),
+                iconSize: stopsFusioned? Lf.point(12 + (4*(matchingIDs.length-1)), 12) : Lf.point(12,12),
             }),
             title: name,
         });
@@ -287,11 +295,11 @@
      * @param id
      * @param blank
      */
-    function getFusionedMarker(id: string, blank: boolean = true): La.Marker {
+    function getFusionedMarker(id: string, blank: boolean = true): Lf.Marker {
         const posID = getCoordID(id);
         if (blank) {
             if (leaflet.markersCache[id] && leaflet.markersCache[id].marker !== null) {
-                return leaflet.markersCache[id].marker as La.Marker<any>;
+                return leaflet.markersCache[id].marker as Lf.Marker<any>;
             } else {
                 return getMarker(id, blank);
             }
@@ -341,7 +349,7 @@
                     // only the first ID of the overlapping list loads the marker
                     && (leaflet.overlappingIDs[getCoordID(v[0])].indexOf(v[0]) === 0 || !stopsFusioned)
                 ))
-                .map((v) => v[1].marker as La.Marker<any>)
+                .map((v) => v[1].marker as Lf.Marker<any>)
             );
         }
     }
@@ -451,7 +459,7 @@
             leaflet.markersCache[id].found = true;
         }
         if (leaflet.markersCache[id].marker !== null) {
-            leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker as La.Marker<any>);
+            leaflet.markersCluster?.removeLayer(leaflet.markersCache[id].marker as Lf.Marker<any>);
         } else {
             throw new Error("addFoundMarker: didn't expect a null marker when reading marker cache.");
         }
@@ -602,7 +610,9 @@
         
         <output class="info">
             <span class="status" style="background-color: {submitStatus}">{submitMsg}</span>
-            <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
+            {#if initDone}
+                <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
+            {/if}
         </output>
     </div>
     
