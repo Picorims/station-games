@@ -59,9 +59,10 @@
         --c-blue-3: #77CBD5;
         --c-blue-4: #BAE4E8;
 
-        --c-yellow: #FF8C42;
-        --c-red: #DB5A42;
-        --c-green: #55b85a;
+        --c-orange: #FF8C42;
+        --c-red: #eb6851;
+        --c-green: #70ca75;
+        --c-green-dark: #327736;
         --p-small-radius: 4px;
         --p-medium-radius: 8px;
         --p-large-radius: 16px;

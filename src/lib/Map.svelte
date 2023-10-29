@@ -118,8 +118,20 @@
         }).addTo(leaflet.map);
         leaflet.map.setMaxBounds([[parisCenter[0]-1.5, parisCenter[1]-1.5],[parisCenter[0]+1.5, parisCenter[1]+1.5]]);
 
-        leaflet.markersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
-        leaflet.foundMarkersCluster = L.markerClusterGroup({chunkedLoading: true, chunkProgress: updateProgress});
+        const zoomFn = (zoom: number) => (zoom >= 16)? 3 : (zoom >= 15)? 10 : (zoom >= 11)? 50 : 60;
+        leaflet.markersCluster = L.markerClusterGroup({
+            chunkedLoading: true,
+            chunkProgress: updateProgress,
+            maxClusterRadius: zoomFn,
+            iconCreateFunction: (cluster) => getClusterDivIcon(cluster, false),
+        });
+        leaflet.foundMarkersCluster = L.markerClusterGroup({
+            chunkedLoading: true,
+            chunkProgress: updateProgress,
+            maxClusterRadius: zoomFn,
+            iconCreateFunction: (cluster) => getClusterDivIcon(cluster, true),
+        });
+        leaflet.map.on("zoom", () => {console.log("zoom: " + leaflet.map?.getZoom())})
 
         let i = 0;
         for (const id in data) {
@@ -161,11 +173,22 @@
         if (progressBar) progressBar.value = (processed/total) * 100;
     }
 
+    function getClusterDivIcon(cluster: La.MarkerCluster, found: boolean): L.DivIcon {
+        const count = cluster.getChildCount();
+        const size = (count > 500)? "large" : (count > 120)? "medium" : "small"
+
+        return new L.DivIcon({
+            html: `<span>${count}</span>`,
+            className: `m-cluster m-${size} m-${found? "found" : "not-found"}`,
+            iconSize: new L.Point(40, 20),
+        });
+    }
+
     /**
      * Create leaflet marker
      * @param id
      */
-    function getMarker(id: string, blank: boolean = true): La.Marker {
+    function getMarker(id: string, blank: boolean = true): L.Marker {
         const posID = getCoordID(id);
         const matchingIDs = leaflet.overlappingIDs[posID];
         
@@ -460,6 +483,8 @@
         const triggerList = [stopsFusioned];
         reloadMarkersFromSave();
     }
+
+    // TODO: markercluster grouping too quickly
 </script>
 
 
@@ -511,6 +536,28 @@
     }
     :global(.station-tooltip) {
         font-size: 1rem;
+    }
+    :global(.m-cluster) {
+        display: inline-block;
+        width: auto !important;
+        height: auto !important;
+        padding: 0.4em;
+        font-size: 0.9rem;
+        line-height: 1em;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 50px;
+    }
+    :global(.m-cluster.m-not-found.m-small, .m-cluster.m-not-found.m-medium) {
+        background-color: var(--c-white);
+        border: 1px solid var(--c-gray-3);
+    }
+    :global(.m-cluster.m-not-found.m-large) {
+        background-color: var(--c-orange);
+    }
+    :global(.m-cluster.m-found) {
+        background-color: var(--c-green);
+        border: 1px solid var(--c-green-dark);
     }
 
     form {
@@ -580,6 +627,6 @@
         z-index: 5000;
         bottom: 0px;
         left: 5px;
-        width: 100px;
+        width: 50vw;
     }
 </style>
