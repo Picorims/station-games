@@ -31,7 +31,7 @@
 <div class="block-interact">
     <div class="popup">
         <button on:click={togglePopup} class="close-popup">X</button>
-        <p>v1.0.0 - <ExternalLink url="https://github.com/Picorims/station-games/blob/main/CHANGELOGS.md" label="Changelogs"></ExternalLink></p>
+        <p>v1.0.1 - <ExternalLink url="https://github.com/Picorims/station-games/blob/main/CHANGELOGS.md" label="Changelogs"></ExternalLink></p>
         <h2>Welcome!</h2>
         <p>
             <strong>

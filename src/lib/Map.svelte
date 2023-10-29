@@ -420,7 +420,7 @@
             if (cache) {
                 return cache;
             } else {
-                const transform = v.normalize("NFD").replaceAll(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ");
+                const transform = v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ").replace(/ +/g, " ");
                 transformCache[v] = transform;
                 return transform;
             }
