@@ -162,6 +162,11 @@
         console.timeEnd("init");
         initDone = true;
         loading = false;
+
+        // restore save if exists
+        const successLocal = restoreSaveFromLocalStorage();
+        if (successLocal) console.log("restored local storage save");
+        else console.log("No valid local storage");
     }
 
     function regenMarkerCache() {
@@ -359,6 +364,7 @@
             if (stationsEqual(search, keywords)) {
                 submitMsg = "Already found";
                 submitStatus = SubmitStatus.ERROR;
+                saveToLocalStorage();
                 loading = false;
                 console.timeEnd("searching");
                 return;
@@ -386,6 +392,7 @@
             submitStatus = SubmitStatus.ERROR;
         }
         stationInput.value = "";
+        saveToLocalStorage();
         loading = false;
         console.timeEnd("searching");
     }
@@ -482,32 +489,55 @@
         loading = false;
     }
 
+    function saveToLocalStorage() {
+        console.log("saving to local storage");
+        localStorage.setItem("station-games-save", JSON.stringify(save));
+    }
+
+    /**
+     * Also returns if succeeded
+     */
+    function restoreSaveFromLocalStorage(): boolean {
+        console.log("loading from local storage");
+        const data = localStorage.getItem("station-games-save");
+        if (data === null) return false;
+        loadSave(JSON.parse(data));
+        console.log("loading from local storage - OK");
+        return true;
+    }
+
     /**
      * load external json file
      */
     export function uploadSave(file: Blob) {
-        console.log("loading save");
+        console.log("uploading save");
         file.text().then((text) => {
             const tmpSave: Save = JSON.parse(text);
-            if (!tmpSave.foundKeywords) {
-                showSaveLoadError("missing keywords");
-            }
-            if (!tmpSave.foundStations) {
-                showSaveLoadError("missing station IDs");
-            }
-            if (save.version !== 1) {
-                showSaveLoadError("unsupported version");
-            }
-            if (Object.keys(tmpSave).length > 3) {
-                showSaveLoadError("unknown fields");
-            }
-            save = tmpSave;
-            reloadMarkersFromSave();
+            loadSave(tmpSave, false);
         });
     }
 
-    function showSaveLoadError(context: string = "unknown") {
-        alert("Invalid save file! Make sure you uploaded the right file.\n\nContext: " + context + ".");
+    function loadSave(json: Save, silent = true) {
+        console.log("loading save");
+        if (!json.foundKeywords) {
+            showSaveLoadError("missing keywords", silent);
+        }
+        if (!json.foundStations) {
+            showSaveLoadError("missing station IDs", silent);
+        }
+        if (save.version !== 1) {
+            showSaveLoadError("unsupported version", silent);
+        }
+        if (Object.keys(json).length > 3) {
+            showSaveLoadError("unknown fields", silent);
+        }
+        save = json;
+        reloadMarkersFromSave();
+    }
+
+    function showSaveLoadError(context: string = "unknown", silent = false) {
+        if (!silent) alert("Invalid save file! Make sure you uploaded the right file.\n\nContext: " + context + ".");
+        else console.log("load save error: " + context);
     }
 
     /**
@@ -517,7 +547,7 @@
     function reloadMarkersFromSave() {
         loading = true;
         if (!initDone) {
-            console.log("attempted updating the map");
+            console.warn("attempted updating the map");
             return;
         };
         console.log("updating the map");

@@ -63,6 +63,15 @@
             <li><strong>white group:</strong> not found;</li>
             <li><strong>orange group:</strong> many stations not found.</li>
         </ul>
+        <h3>Saving your progress</h3>
+        <p>
+            <strong>
+                While your progress is saved to the browser's local storage, it is advised
+                to export your save from time to time. Note that local data is NOT persistent
+                if you enabled cache erasing on quit on your browser! The save does not contain
+                any sensitive data, only your game progress.
+            </strong>
+        </p>
         <hr>
         <h2>Licenses</h2>
         <h3>Program</h3>

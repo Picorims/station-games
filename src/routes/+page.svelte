@@ -29,11 +29,11 @@
 
     <div class="buttons">
         <InfoButton></InfoButton>
-        <button on:click={() => {mapComponent.downloadSave()}}>Save</button>
+        <button on:click={() => {mapComponent.downloadSave()}}>Export</button>
         <input type="file" bind:this={hiddenInput} style="display: none;" on:change={() => {
             if (hiddenInput.files) mapComponent.uploadSave(hiddenInput.files[0]);
         }}/>
-        <button on:click={() => {hiddenInput.click();}}>Open save</button>
+        <button on:click={() => {hiddenInput.click();}}>Import</button>
         <button on:click={() => {mapComponent.reset();}}>Reset</button>
     </div>
 </header>
