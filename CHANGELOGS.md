@@ -2,6 +2,10 @@
 
 ## v1.0.3
 
+### Changed
+
+- Improved search interaction (clear input at all times, display query together with result state).
+
 ### Fixed
 
 - Percentage calculation is now correct (#3)

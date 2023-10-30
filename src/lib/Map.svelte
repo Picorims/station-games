@@ -373,8 +373,9 @@
         const keywords = stationInput.value;
         for (const search of save.foundKeywords) {
             if (stationsEqual(search, keywords)) {
-                submitMsg = "Already found";
+                submitMsg = "Already found " + keywords;
                 submitStatus = SubmitStatus.ERROR;
+                stationInput.value = "";
                 saveToLocalStorage();
                 loading = false;
                 console.timeEnd("searching");
@@ -390,7 +391,7 @@
                 found = true;
                 if (firstFound) {
                     save.foundKeywords.push(keywords);
-                    submitMsg = "Found!";
+                    submitMsg = "Found " + keywords + "!";
                     submitStatus = SubmitStatus.OK;
                 }
                 addStation(id);
@@ -399,7 +400,7 @@
             }
         }
         if (!found) {
-            submitMsg = "Not found";
+            submitMsg = "Not found - " + keywords;
             submitStatus = SubmitStatus.ERROR;
         }
         stationInput.value = "";
