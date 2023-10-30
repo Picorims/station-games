@@ -373,8 +373,9 @@
         const keywords = stationInput.value;
         for (const search of save.foundKeywords) {
             if (stationsEqual(search, keywords)) {
-                submitMsg = "Already found";
+                submitMsg = "Already found " + keywords;
                 submitStatus = SubmitStatus.ERROR;
+                stationInput.value = "";
                 saveToLocalStorage();
                 loading = false;
                 console.timeEnd("searching");
@@ -390,7 +391,7 @@
                 found = true;
                 if (firstFound) {
                     save.foundKeywords.push(keywords);
-                    submitMsg = "Found!";
+                    submitMsg = "Found " + keywords + "!";
                     submitStatus = SubmitStatus.OK;
                 }
                 addStation(id);
@@ -399,7 +400,7 @@
             }
         }
         if (!found) {
-            submitMsg = "Not found";
+            submitMsg = "Not found - " + keywords;
             submitStatus = SubmitStatus.ERROR;
         }
         stationInput.value = "";
@@ -420,7 +421,7 @@
             if (cache) {
                 return cache;
             } else {
-                const transform = v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ").replace(/ +/g, " ");
+                const transform = v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll("-"," ").replace(/ +/g, " ").trim();
                 transformCache[v] = transform;
                 return transform;
             }
@@ -614,7 +615,7 @@
         <output class="info">
             <span class="status" style="background-color: {submitStatus}">{submitMsg}</span>
             {#if initDone}
-                <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
+                <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 100_000)/1_000}%)</span>
             {/if}
         </output>
     </div>
