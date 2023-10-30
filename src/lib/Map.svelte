@@ -614,7 +614,7 @@
         <output class="info">
             <span class="status" style="background-color: {submitStatus}">{submitMsg}</span>
             {#if initDone}
-                <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 1000)/1000}%)</span>
+                <span>{nbFoundMarkers} / {nbMarkers} ({Math.round(nbFoundMarkers/nbMarkers * 100_000)/1_000}%)</span>
             {/if}
         </output>
     </div>

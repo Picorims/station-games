@@ -1,5 +1,11 @@
 # Changelogs
 
+## v1.0.3
+
+### Fixed
+
+- Fixed wrong percentage calculation (#3)
+
 ## v1.0.2
 
 ### Changed
