@@ -4,7 +4,8 @@
 
 ### Fixed
 
-- Fixed wrong percentage calculation (#3)
+- Percentage calculation is now correct (#3)
+- Adding spaces before or after the input do not prevent from finding a station anymore. (#2)
 
 ## v1.0.2
 
